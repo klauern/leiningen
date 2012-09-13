@@ -193,20 +193,23 @@
         (and (set? result) (set? latter))
         (set/union latter result)
 
+        (and (vector? result) (vector? latter))
+        (into result latter)
+
         (and (coll? result) (coll? latter))
-        (concat latter result)
+        (concat result latter)
 
         (= (class result) (class latter)) latter
 
         :else (doto latter (println "has a type mismatch merging profiles."))))
 
 (defn- apply-profiles [project profiles]
-  ;; We reverse because we want profile values to override the project, so we
-  ;; need "last wins" in the reduce, but we want the first profile specified by
-  ;; the user to take precedence.
-  (reduce (partial merge-with profile-key-merge)
+  (reduce (fn [project profile]
+            (with-meta
+              (merge-with profile-key-merge project profile)
+              (merge-with profile-key-merge (meta project) (meta profile))))
           project
-          (reverse profiles)))
+          profiles))
 
 (defn- lookup-profile
   "Lookup a profile in the given profiles map, warning when the profile doesn't
@@ -217,13 +220,14 @@
         (let [result (get profiles profile)]
           (when-not (or result (#{:provided :dev :user :test :production} profile))
             (println "Warning: profile" profile "not found."))
-          (lookup-profile profiles result))
+          (vary-meta (lookup-profile profiles result)
+                     update-in [:active-profiles] (fnil conj []) profile))
 
         ;; composite profile
         (vector? profile)
         (apply-profiles {} (map (partial lookup-profile profiles) profile))
 
-        :else profile))
+        :else (or profile {})))
 
 (defn- warn-user-repos []
   (when (->> (vals (user/profiles))
