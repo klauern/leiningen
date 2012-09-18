@@ -14,6 +14,7 @@ bin/nom
 docs
 .lein-classpath
 .lein-project-checksum
+.leinrc
 /leiningen-core/.lein-plugins/checksum
 /wiki
 /web
