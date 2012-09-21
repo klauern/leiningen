@@ -37,11 +37,19 @@
                       :when dep-project]
                   (checkout-dep-paths project dep dep-project))))
 
+(defn native-stale? [deps native-path]
+  (when native-path
+    (let [native-mod (.lastModified (io/file native-path))]
+      (some #(<= native-mod (.lastModified (io/file %)))
+            deps))))
+
 (defn extract-native-deps [deps native-path]
+  (println "Extracting native")
   (doseq [jar (map #(JarFile. %) deps)
           entry (enumeration-seq (.entries jar))
-          :when (.startsWith (.getName entry) "native/")]
-    (let [f (io/file native-path (subs (.getName entry) (count "native/")))]
+          :let [entry-name (.getName entry)]
+          :when (.startsWith entry-name "native/")]
+    (let [f (io/file native-path (subs entry-name (count "native/")))]
       (if (.isDirectory entry)
         (.mkdirs f)
         (do (.mkdirs (.getParentFile f))
@@ -164,9 +172,9 @@
   (let [jars (->> (apply get-dependencies dependencies-key project rest)
                   (aether/dependency-files)
                   (filter #(re-find #"\.(jar|zip)$" (.getName %))))]
-    (when-not (= :plugins dependencies-key)
-      (when-stale [dependencies-key] project
-                  extract-native-deps jars native-path))
+    (when (and (not= :plugins dependencies-key)
+               (native-stale? jars native-path))
+      (extract-native-deps jars native-path))
     jars))
 
 (defn dependency-hierarchy

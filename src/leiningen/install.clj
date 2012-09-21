@@ -13,6 +13,7 @@
   ([project]
      (let [jarfile (jar/jar project)
            pomfile (pom/pom project)]
+       (println "Installing" jarfile)
        (aether/install :coordinates [(symbol (:group project)
                                              (:name project))
                                      (:version project)]

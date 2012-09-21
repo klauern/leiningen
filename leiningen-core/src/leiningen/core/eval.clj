@@ -166,7 +166,7 @@
     [(apply str "-Xbootclasspath/a:"
             (interpose java.io.File/pathSeparatorChar
                        (classpath/get-classpath project)))]
-    ["-cp" (string/join java.io.File/pathSeparatorChar
+    ["-classpath" (string/join java.io.File/pathSeparatorChar
                         (classpath/get-classpath project))]))
 
 (defn shell-command [project form]
