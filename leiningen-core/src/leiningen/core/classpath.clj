@@ -4,7 +4,8 @@
             [cemerick.pomegranate :as pomegranate]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [leiningen.core.user :as user])
+            [leiningen.core.user :as user]
+            [leiningen.core.utils :as utils])
   (:import (java.util.jar JarFile)
            (java.net URL)
            (org.sonatype.aether.resolution DependencyResolutionException)))
@@ -37,19 +38,12 @@
                       :when dep-project]
                   (checkout-dep-paths project dep dep-project))))
 
-(defn native-stale? [deps native-path]
-  (when native-path
-    (let [native-mod (.lastModified (io/file native-path))]
-      (some #(<= native-mod (.lastModified (io/file %)))
-            deps))))
-
-(defn extract-native-deps [deps native-path]
-  (println "Extracting native")
+(defn extract-native-deps [deps native-dir]
   (doseq [jar (map #(JarFile. %) deps)
           entry (enumeration-seq (.entries jar))
           :let [entry-name (.getName entry)]
           :when (.startsWith entry-name "native/")]
-    (let [f (io/file native-path (subs entry-name (count "native/")))]
+    (let [f (io/file native-dir (subs entry-name (count "native/")))]
       (if (.isDirectory entry)
         (.mkdirs f)
         (do (.mkdirs (.getParentFile f))
@@ -171,10 +165,12 @@
   [dependencies-key {:keys [repositories native-path] :as project} & rest]
   (let [jars (->> (apply get-dependencies dependencies-key project rest)
                   (aether/dependency-files)
-                  (filter #(re-find #"\.(jar|zip)$" (.getName %))))]
+                  (filter #(re-find #"\.(jar|zip)$" (.getName %))))
+        native-dir (and native-path (io/file native-path))]
     (when (and (not= :plugins dependencies-key)
-               (native-stale? jars native-path))
-      (extract-native-deps jars native-path))
+               (or (utils/newer-than? (utils/mod-time ".lein-run") jars)
+                   (not (.exists native-dir))))
+      (extract-native-deps jars native-dir))
     jars))
 
 (defn dependency-hierarchy

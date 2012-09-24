@@ -29,3 +29,16 @@
              (require ns)))
          (resolve sym))))
   ([ns sym] (require-resolve (symbol ns sym))))
+
+(defn touch-file [path]
+  (let [f (io/file path)]
+    (if (.exists f)
+      (.setLastModified f (System/currentTimeMillis))
+      (.createNewFile f))))
+
+(defn mod-time [path]
+  (.lastModified (io/file path)))
+
+(defn newer-than? [time files]
+  (some (partial <= time)
+        (map mod-time files)))
