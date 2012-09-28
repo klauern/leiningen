@@ -206,9 +206,9 @@
 (defn get-classpath
   "Return a the classpath for project as a list of strings."
   [project]
-  (for [path (concat (:test-paths project)
-                     (:source-paths project)
-                     (:resource-paths project)
+  (for [path (concat (reverse (:test-paths project))
+                     (reverse (:source-paths project))
+                     (reverse (:resource-paths project))
                      [(:compile-path project)]
                      (checkout-deps-paths project)
                      (for [dep (resolve-dependencies :dependencies project)]

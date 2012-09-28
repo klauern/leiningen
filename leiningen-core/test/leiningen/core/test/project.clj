@@ -15,7 +15,7 @@
 
 (def paths {:source-paths ["src"],
             :test-paths ["test"],
-            :resource-paths ["dev-resources" "resources"],
+            :resource-paths ["resources" "dev-resources"],
             :compile-path "target/classes",
             :native-path "target/native",
             :target-path "target"})
@@ -47,7 +47,9 @@
       (is (= (k actual) (str (:root actual) "/" path))))
     (doseq [[k path] paths
             :when (coll? path)]
-      (is (= (k actual) (for [p path] (str (:root actual) "/" p)))))))
+      (is (= (k actual)
+             (for [p path]
+               (str (:root actual) "/" p)))))))
 
 ;; TODO: test omit-default
 ;; TODO: test reading project that doesn't def project
@@ -66,20 +68,20 @@
 
 (deftest test-merge-profile-paths
   (with-redefs [default-profiles test-profiles]
-    (is (= ["/etc/myapp" "test/hi" "blue-resources" "resources"]
+    (is (= ["resources" "blue-resources" "test/hi" "/etc/myapp"]
            (-> {:resource-paths ["resources"]
                 :profiles {:blue {:resource-paths ["blue-resources"]}}}
-               (merge-profiles [:qa :tes :blue])
+               (merge-profiles [:blue :tes :qa])
                :resource-paths)))
-    (is (= ["/etc/myapp" "test/hi" "blue-resources"]
+    (is (= ["blue-resources" "test/hi" "/etc/myapp"]
            (-> {:resource-paths ^:displace ["resources"]
                 :profiles {:blue {:resource-paths ["blue-resources"]}}}
-               (merge-profiles [:qa :tes :blue])
+               (merge-profiles [:blue :tes :qa])
                :resource-paths)))
     (is (= ["replaced"]
            (-> {:resource-paths ["resources"]
                 :profiles {:blue {:resource-paths ^:replace ["replaced"]}}}
-               (merge-profiles [:blue :qa :tes])
+               (merge-profiles [:tes :qa :blue])
                :resource-paths)))
     (is (= {:url "http://" :username "u" :password "p"}
            (-> {:repositories [["foo" {:url "http://" :creds :gpg}]]
@@ -87,7 +89,7 @@
                                                  ^:replace {:url "http://"
                                                             :username "u"
                                                             :password "p"}}}}}
-               (merge-profiles [:blue :qa :tes])
+               (merge-profiles [:tes :qa :blue])
                :repositories
                last last)))))
 
@@ -168,13 +170,13 @@
                (merge-profiles [:a {:C 3}]))))))
 
 (deftest test-composite-profiles
-  (let [expected-result {:A '(2 3 1), :B 2, :C 3,
+  (let [expected-result {:A [1 3 2], :B 2, :C 3,
                          :repositories [["central" {:url "http://repo1.maven.org/maven2/"}]
                                         ["clojars" {:url "https://clojars.org/repo/"}]]
                          :dependencies [], :compile-path "classes"}]
     (is (= expected-result
-           (-> {:profiles {:a [:c :b]
-                           :b [:d {:A [1] :B 1 :C 1}]
+           (-> {:profiles {:a [:b :c]
+                           :b [{:A [1] :B 1 :C 1} :d]
                            :c {:A [2] :B 2}
                            :d {:A [3] :C 3}}}
                (merge-profiles [:a])
@@ -189,7 +191,7 @@
            (-> {:profiles {:a {:A 1 :B 2}
                            :b {:B 2 :C 2}
                            :c {:C 3}
-                           :default [:c :b :a]}}
+                           :default [:a :b :c]}}
                (merge-profiles [:default])
                (dissoc :profiles))))))
 
