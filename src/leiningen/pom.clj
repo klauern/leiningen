@@ -138,19 +138,10 @@
                             :type extension})])]))
 
 (defmethod xml-tags ::dependency
-  ([_ [dep version & {:keys [optional classifier
-                             exclusions scope
-                             extension]}]]
+  ([_ [dep opts]]
      [:dependency
       (map (partial apply xml-tags)
-           {:group-id (or (namespace dep) (name dep))
-            :artifact-id (name dep)
-            :version version
-            :optional optional
-            :classifier classifier
-            :type extension
-            :exclusions exclusions
-            :scope scope})]))
+           opts)]))
 
 (defmethod xml-tags ::repository
   ([_ [id opts]]
