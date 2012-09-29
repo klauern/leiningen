@@ -4,7 +4,9 @@
             [cemerick.pomegranate :as pomegranate]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [leiningen.core.user :as user])
+            [leiningen.core.user :as user]
+            [useful.map :refer [update]]
+            [useful.fn :refer [fix]])
   (:import (java.util.jar JarFile)
            (java.net URL)
            (org.sonatype.aether.resolution DependencyResolutionException)))
@@ -106,23 +108,51 @@
 (defn- root-cause [e]
   (last (take-while identity (iterate (memfn getCause) e))))
 
+(defn exclusion-spec
+  "Transform an exclusion map into a spec of the form [name/group & opts]."
+  [exclusion]
+  (let [{:keys [artifact-id group-id]} exclusion]
+    (into [(symbol group-id artifact-id)]
+          (apply concat (dissoc exclusion :artifact-id :group-id)))))
+
+(defn exclusion-specs [exclusions]
+  (seq (map exclusion-spec exclusions)))
+
 (defn dependency-coordinate
   "Transform a dependency map into a coordinate of the form [name/group \"version\" & opts]."
   [dep]
   (let [{:keys [artifact-id group-id version]} dep]
     (into [(symbol group-id artifact-id) version]
-          (apply concat (dissoc dep :artifact-id :group-id :version)))))
+          (apply concat
+                 (-> dep
+                     (update :exclusions exclusion-specs)
+                     (dissoc :artifact-id :group-id :version))))))
+
+(defn artifact-map
+  [id]
+  {:artifact-id (name id)
+   :group-id (or (namespace id) (name id))})
+
+(defn exclusion-map
+  "Transform an exclusion spec into a map."
+  [spec]
+  (let [[id & {:as opts}] (fix spec symbol? vector)]
+    (-> opts
+        (merge (artifact-map id))
+        (with-meta (meta spec)))))
+
+(defn exclusion-maps [specs]
+  (seq (map exclusion-map specs)))
 
 (defn dependency-map
   "Transform a dependency coordinate into a map."
   [coordinate]
-  (let [[id version & {:as opts}] coordinate
-        artifact-id (name id)
-        group-id    (or (namespace id) artifact-id)]
-    (assoc opts
-      :artifact-id artifact-id
-      :group-id group-id
-      :version version)))
+  (let [[id version & {:as opts}] coordinate]
+    (-> opts
+        (merge (artifact-map id))
+        (assoc :version version)
+        (update :exclusions exclusion-maps)
+        (with-meta (meta coordinate)))))
 
 (defn- coordinates
   "Extract the specified dependency coordinates from project and put them in the

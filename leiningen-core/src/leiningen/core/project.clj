@@ -49,10 +49,7 @@
                 left right)
 
         (and (coll? left) (coll? right))
-        ((if (-> left meta :distinct)
-           distinct
-           identity)
-         (concat left right))
+        (concat left right)
 
         (= (class left) (class right)) right
 
@@ -145,13 +142,14 @@
 (defn absolutize-paths [project]
   (reduce absolutize-path project (keys project)))
 
-(defn remove-aliases [project]
-  (dissoc project :eval-in-leiningen))
-
 (defn normalize
   "Normalize project map to standard representation."
   [project]
-  (-> project normalize-repos normalize-deps remove-aliases))
+  (-> project 
+      (dissoc :eval-in-leiningen)
+      (update :exclusions classpath/exclusion-maps)
+      (normalize-repos)
+      (normalize-deps)))
 
 (defn make-project [project-name version root project]
   (let [repos (if (:omit-default-repositories project)

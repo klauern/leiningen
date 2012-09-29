@@ -26,34 +26,34 @@
                :disable-implicit-clean true,
                :eval-in :leiningen,
                :license {:name "Eclipse Public License"}
-               :dependencies '[[["leiningen-core" "leiningen-core" nil nil]
-                                 {:version "2.0.0-SNAPSHOT"
-                                  :group-id "leiningen-core"
-                                  :artifact-id "leiningen-core"}]
-                               [["clucy" "clucy" nil nil]
-                                {:group-id "clucy"
-                                 :exclusions [org.clojure/clojure]
-                                 :version "0.2.2"
-                                 :artifact-id "clucy"}]
-                               [["lancet" "lancet" nil nil]
-                                {:version "1.0.1"
-                                 :group-id "lancet"
-                                 :artifact-id "lancet"}]
-                               [["hooke" "robert" nil nil]
-                                {:version "1.1.2"
+               :dependencies [[["leiningen-core" "leiningen-core" nil nil]
+                               {:version "2.0.0-SNAPSHOT"
+                                :group-id "leiningen-core"
+                                :artifact-id "leiningen-core"}]
+                              [["clucy" "clucy" nil nil]
+                               {:group-id "clucy"
+                                :exclusions [{:artifact-id "clojure"
+                                              :group-id "org.clojure"}]
+                                :version "0.2.2"
+                                :artifact-id "clucy"}]
+                              [["lancet" "lancet" nil nil]
+                               {:version "1.0.1"
+                                :group-id "lancet"
+                                :artifact-id "lancet"}]
+                              [["hooke" "robert" nil nil]
+                               {:version "1.1.2"
                                  :group-id "robert"
-                                 :artifact-id "hooke"}]
-                               [["stencil" "stencil" nil nil]
-                                {:version "0.2.0"
-                                 :group-id "stencil"
-                                 :artifact-id "stencil"}]]
+                                :artifact-id "hooke"}]
+                              [["stencil" "stencil" nil nil]
+                               {:version "0.2.0"
+                                :group-id "stencil"
+                                :artifact-id "stencil"}]]
                :twelve 12 ; testing unquote
                :repositories [["central" {:url "http://repo1.maven.org/maven2/"}]
                               ["clojars" {:url "https://clojars.org/repo/"}]]})
 
 (deftest test-read-project
   (let [actual (read (.getFile (io/resource "p1.clj")))]
-    (prn actual)
     (doseq [[k v] expected]
       (is (= v (k actual))))
     (doseq [[k path] paths
@@ -71,13 +71,11 @@
 
 (def test-profiles (atom {:qa {:resource-paths ["/etc/myapp"]}
                           :test {:resource-paths ["test/hi"]}
-                          :repl {:dependencies '[[org.clojure/tools.nrepl
-                                                  "0.2.0-beta6"
-                                                  :exclusions
-                                                  [org.clojure/clojure]]
-                                                 [org.thnetos/cd-client "0.3.4"
-                                                  :exclusions
-                                                  [org.clojure/clojure]]]}
+                          :repl {:dependencies
+                                 '[[org.clojure/tools.nrepl "0.2.0-beta6"
+                                    :exclusions [org.clojure/clojure]]
+                                   [org.thnetos/cd-client "0.3.4"
+                                    :exclusions [org.clojure/clojure]]]}
                           :tes :test
                           :dev {:test-paths ["test"]}}))
 
@@ -123,18 +121,19 @@
 (use 'useful.debug)
 
 (deftest test-global-exclusions
-  (is (= '[[org.clojure/clojure]
-           [org.clojure/clojure pomegranate]
-           [org.clojure/clojure]]
-         (map (comp :exclusions second)
-              (? (-> (normalize
-                      {:dependencies
-                       '[[lancet "1.0.1"]
-                         [leiningen-core "2.0.0-SNAPSHOT" :exclusions [pomegranate]]
-                         [clucy "0.2.2" :exclusions [org.clojure/clojure]]]
-                       :exclusions '[org.clojure/clojure]})
-                     (merge-profiles [:default])
-                     :dependencies))))))
+  (is (= (map (comp set classpath/exclusion-maps)
+              '[[org.clojure/clojure]
+                [org.clojure/clojure pomegranate]
+                [org.clojure/clojure]])
+         (map (comp set :exclusions second)
+              (-> (normalize
+                   {:dependencies
+                    '[[lancet "1.0.1"]
+                      [leiningen-core "2.0.0-SNAPSHOT" :exclusions [pomegranate]]
+                      [clucy "0.2.2" :exclusions [org.clojure/clojure]]]
+                    :exclusions '[org.clojure/clojure]})
+                  (merge-profiles [:default])
+                  :dependencies)))))
 
 (defn add-seven [project]
   (assoc project :seven 7))

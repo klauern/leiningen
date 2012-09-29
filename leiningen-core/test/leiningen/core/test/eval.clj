@@ -3,16 +3,19 @@
         [leiningen.core.eval])
   (:require [clojure.java.io :as io]
             [clojure.set :as set]
+            [leiningen.core.project :as project]
             [leiningen.core.classpath :as classpath])
   (:import (java.io File)))
 
-(def project {:dependencies '[[org.clojure/clojure "1.3.0"]]
-              :root "/tmp/lein-sample-project"
-              :target-path "/tmp/lein-sample-project/target"
-              :source-path ["/tmp/lein-sample-project/src"]
-              :resources-path ["/tmp/lein-sample-project/resources"]
-              :test-path ["/tmp/lein-sample-project/test"]
-              :compile-path "/tmp/lein-sample-project/classes"})
+(def project 
+  (project/normalize
+   {:dependencies '[[org.clojure/clojure "1.3.0"]]
+    :root "/tmp/lein-sample-project"
+    :target-path "/tmp/lein-sample-project/target"
+    :source-path ["/tmp/lein-sample-project/src"]
+    :resources-path ["/tmp/lein-sample-project/resources"]
+    :test-path ["/tmp/lein-sample-project/test"]
+    :compile-path "/tmp/lein-sample-project/classes"}))
 
 (deftest test-eval-in-project
   (doseq [where [:subprocess :leiningen :classloader]]
