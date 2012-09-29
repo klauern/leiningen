@@ -16,16 +16,17 @@
 (defn m2-file [f]
   (io/file (System/getProperty "user.home") ".m2" "repository" f))
 
-(def project {:dependencies '[[org.clojure/clojure "1.3.0"]
-                              [ring/ring-core "1.0.0-RC1"
-                               :exclusions [commons-codec]]]
-              :checkout-deps-shares [:source-paths :resource-paths :compile-path]
-              :repositories (:repositories project/defaults)
-              :root "/tmp/lein-sample-project"
-              :target-path "/tmp/lein-sample-project/target"
-              :source-paths ["/tmp/lein-sample-project/src"]
-              :resource-paths ["/tmp/lein-sample-project/resources"]
-              :test-paths ["/tmp/lein-sample-project/test"]})
+(def project (project/normalize
+              {:dependencies '[[org.clojure/clojure "1.3.0"]
+                               [ring/ring-core "1.0.0-RC1"
+                                :exclusions [commons-codec]]]
+               :checkout-deps-shares [:source-paths :resource-paths :compile-path]
+               :repositories project/default-repositories
+               :root "/tmp/lein-sample-project"
+               :target-path "target"
+               :source-paths ["src"]
+               :resource-paths ["resources"]
+               :test-paths ["test"]}))
 
 (deftest test-resolve-deps
   (doseq [f (reverse (file-seq (io/file (:root project))))]

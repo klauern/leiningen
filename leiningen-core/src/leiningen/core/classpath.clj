@@ -106,6 +106,31 @@
 (defn- root-cause [e]
   (last (take-while identity (iterate (memfn getCause) e))))
 
+(defn dependency-coordinate
+  "Transform a dependency map into a coordinate of the form [name/group \"version\" & opts]."
+  [dep]
+  (let [{:keys [artifact-id group-id version]} dep]
+    (into [(symbol group-id artifact-id) version]
+          (apply concat (dissoc dep :artifact-id :group-id :version)))))
+
+(defn dependency-map
+  "Transform a dependency coordinate into a map."
+  [coordinate]
+  (let [[id version & {:as opts}] coordinate
+        artifact-id (name id)
+        group-id    (or (namespace id) artifact-id)]
+    (assoc opts
+      :artifact-id artifact-id
+      :group-id group-id
+      :version version)))
+
+(defn- coordinates
+  "Extract the specified dependency coordinates from project and put them in the
+  form expected by pomegranate."
+  [project dependencies-key]
+  (map (comp dependency-coordinate second)
+       (get project dependencies-key)))
+
 (defn- get-dependencies
   [dependencies-key {:keys [repositories local-repo offline? update
                             checksum mirrors] :as project}
@@ -120,7 +145,7 @@
      :repositories (->> repositories
                         (map add-repo-auth)
                         (map (partial update-policies update checksum)))
-     :coordinates (get project dependencies-key)
+     :coordinates (coordinates project dependencies-key)
      :mirrors mirrors
      :transfer-listener
      (bound-fn [e]
@@ -180,7 +205,7 @@
   "Returns a graph of the project's dependencies."
   [dependencies-key project]
   (aether/dependency-hierarchy
-   (get project dependencies-key)
+   (coordinates project dependencies-key)
    (get-dependencies dependencies-key project)))
 
 (defn- normalize-path [root path]
