@@ -82,7 +82,7 @@
     <dependency>
       <groupId>org.tcrawley</groupId>
       <artifactId>dynapath</artifactId>
-      <version>0.2.3</version>
+      <version>0.2.5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
